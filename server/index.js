@@ -31,21 +31,38 @@ const removeFiles = files => Promise.allSettled(files.filter(Boolean).map(file =
 
 app.get('/api/health', (_req, res) => res.json({ status:'ok' }));
 
-function processJob(job, fields) {
-  const style = templates[fields.style] || templates.cinematic;
+const probeDuration = input => new Promise((resolve, reject) => {
+  ffmpeg.ffprobe(input, (error, metadata) => {
+    if (error) reject(error);
+    else resolve(Number(metadata.format?.duration) || 30);
+  });
+});
+
+async function processJob(job, fields) {
+  const styleName = templates[fields.style] ? fields.style : 'cinematic';
+  const style = templates[styleName];
   const ratio = ['9:16','1:1','16:9'].includes(fields.ratio) ? fields.ratio : '9:16';
   const sizes = { '9:16':'1080:1920', '1:1':'1080:1080', '16:9':'1920:1080' };
+  const sourceDuration = await probeDuration(job.video);
+  const requestedDuration = Number(fields.duration) || sourceDuration;
+  const duration = Math.max(1, Math.min(sourceDuration, requestedDuration, 30));
+  const outroStart = Math.max(style.intro, duration - style.outro);
   const command = ffmpeg(job.video);
   if (job.audio) command.input(job.audio);
   command.videoFilters([
     `scale=${sizes[ratio]}:force_original_aspect_ratio=decrease`,
     `pad=${sizes[ratio]}:(ow-iw)/2:(oh-ih)/2`,
     style.filter,
-  ]).duration(Number(fields.duration) || 30)
+    `fade=t=in:st=0:d=${style.intro}:color=${style.fadeColor}`,
+    `fade=t=out:st=${outroStart}:d=${style.outro}:color=${style.fadeColor}`,
+  ]).duration(duration)
     .outputOptions(['-c:v libx264','-preset fast','-movflags +faststart','-pix_fmt yuv420p']);
   if (job.audio) command.complexFilter(`[0:a]volume=${Number(fields.originalVolume)||.45}[a0];[1:a]volume=${Number(fields.musicVolume)||style.musicVolume}[a1];[a0][a1]amix=inputs=2:duration=shortest[a]`).outputOptions(['-map 0:v','-map [a]','-c:a aac']);
 
-  command.on('start', () => Object.assign(job, { status:'processing', stage:'Applying style and mixing audio' }));
+  command.on('start', () => Object.assign(job, {
+    status:'processing',
+    stage:`Applying ${styleName[0].toUpperCase() + styleName.slice(1)} style and mixing audio`,
+  }));
   command.on('progress', ({ percent }) => { job.progress = Math.max(job.progress, Math.min(99, Math.round(percent || 0))); });
   command.on('end', async () => {
     Object.assign(job, { status:'complete', stage:'Ready to download', progress:100 });
@@ -80,7 +97,10 @@ app.post('/api/render/jobs', upload.fields([{ name:'video', maxCount:1 }, { name
     statusUrl:`/api/render/status?id=${encodeURIComponent(id)}`,
     downloadUrl:`/api/render/download?id=${encodeURIComponent(id)}`,
   });
-  processJob(job, req.body);
+  processJob(job, req.body).catch(async error => {
+    Object.assign(job, { status:'failed', error:error.message, stage:'Render failed' });
+    await removeFiles([job.video, job.audio, job.output]);
+  });
 });
 
 function sendJobStatus(id, res) {
