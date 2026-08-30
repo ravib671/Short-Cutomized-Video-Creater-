@@ -73,25 +73,35 @@ app.post('/api/render/jobs', upload.fields([{ name:'video', maxCount:1 }, { name
     jobs.delete(id);
     await removeFiles([job.video, job.audio, job.output]);
   }, 60 * 60 * 1000).unref();
-  res.status(202).json({ jobId:id });
+  res.status(202).json({
+    jobId:id,
+    statusUrl:`/api/render/status?id=${encodeURIComponent(id)}`,
+    downloadUrl:`/api/render/download?id=${encodeURIComponent(id)}`,
+  });
   processJob(job, req.body);
 });
 
-app.get('/api/render/jobs/:id', (req,res) => {
-  const job = jobs.get(req.params.id);
+function sendJobStatus(id, res) {
+  const job = jobs.get(id);
   if (!job) return res.status(404).json({ error:'Render job not found.' });
-  res.json({ status:job.status, stage:job.stage, progress:job.progress, error:job.error });
-});
+  return res.json({ status:job.status, stage:job.stage, progress:job.progress, error:job.error });
+}
 
-app.get('/api/render/jobs/:id/download', (req,res) => {
-  const job = jobs.get(req.params.id);
+app.get('/api/render/status', (req,res) => sendJobStatus(req.query.id, res));
+app.get('/api/render/jobs/:id', (req,res) => sendJobStatus(req.params.id, res));
+
+function sendJobDownload(id, res) {
+  const job = jobs.get(id);
   if (!job) return res.status(404).json({ error:'Render job not found.' });
   if (job.status !== 'complete') return res.status(409).json({ error:'The video is not ready yet.' });
-  res.download(job.output, 'short-video.mp4', async () => {
+  return res.download(job.output, 'short-video.mp4', async () => {
     jobs.delete(job.id);
     await removeFiles([job.output]);
   });
-});
+}
+
+app.get('/api/render/download', (req,res) => sendJobDownload(req.query.id, res));
+app.get('/api/render/jobs/:id/download', (req,res) => sendJobDownload(req.params.id, res));
 
 app.use('/api', (_, res) => res.status(404).json({ error:'API endpoint not found.' }));
 app.use((error, _req, res, _next) => {

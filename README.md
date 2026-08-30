@@ -32,3 +32,6 @@ issues, and write-permission problems.
 
 The server uses ES modules. Paths are resolved from `import.meta.url`, so no global
 CommonJS `__dirname` value or current-working-directory assumption is required.
+
+Render creation responses include explicit `statusUrl` and `downloadUrl` values. The
+client uses these URLs directly instead of reconstructing dynamic API paths.

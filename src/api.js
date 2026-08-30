@@ -60,11 +60,15 @@ function uploadJob(formData, onProgress) {
 const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 
 export async function renderVideo(formData, onProgress = () => {}) {
-  const { jobId } = await uploadJob(formData, onProgress);
+  const job = await uploadJob(formData, onProgress);
+  const { jobId } = job;
+  if (!jobId) throw new Error('The upload API did not return a render job ID.');
+  const statusUrl = job.statusUrl || `/api/render/status?id=${encodeURIComponent(jobId)}`;
+  const downloadUrl = job.downloadUrl || `/api/render/download?id=${encodeURIComponent(jobId)}`;
   onProgress(40, 'Preparing your video');
 
   while (true) {
-    const statusResponse = await fetch(`/api/render/jobs/${encodeURIComponent(jobId)}`, {
+    const statusResponse = await fetch(statusUrl, {
       cache: 'no-store',
       headers: { Accept: 'application/json' },
     });
@@ -75,7 +79,7 @@ export async function renderVideo(formData, onProgress = () => {}) {
     await wait(750);
   }
 
-  const download = await fetch(`/api/render/jobs/${jobId}/download`);
+  const download = await fetch(downloadUrl);
   if (!download.ok) throw new Error(await getResponseError(download));
   onProgress(100, 'Download ready');
   return download.blob();
