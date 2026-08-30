@@ -59,6 +59,23 @@ function uploadJob(formData, onProgress) {
 
 const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 
+async function readDownload(response, onProgress) {
+  const total = Number(response.headers.get('content-length')) || 0;
+  if (!response.body?.getReader) return response.blob();
+  const reader = response.body.getReader();
+  const chunks = [];
+  let received = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.byteLength;
+    const percent = total ? 90 + Math.round((received / total) * 10) : 95;
+    onProgress(Math.min(99, percent), 'Downloading finished MP4');
+  }
+  return new Blob(chunks, { type:response.headers.get('content-type') || 'video/mp4' });
+}
+
 export async function renderVideo(formData, onProgress = () => {}) {
   const job = await uploadJob(formData, onProgress);
   const { jobId } = job;
@@ -73,14 +90,16 @@ export async function renderVideo(formData, onProgress = () => {}) {
       headers: { Accept: 'application/json' },
     });
     const job = await getResponseJson(statusResponse, 'The render status API');
-    onProgress(40 + Math.round(job.progress * 0.6), job.stage || 'Rendering video');
+    onProgress(40 + Math.round(job.progress * 0.5), job.stage || 'Rendering video');
     if (job.status === 'failed') throw new Error(job.error || 'Video processing failed.');
     if (job.status === 'complete') break;
     await wait(750);
   }
 
-  const download = await fetch(downloadUrl);
+  onProgress(90, 'Downloading finished MP4');
+  const download = await fetch(downloadUrl, { cache:'no-store' });
   if (!download.ok) throw new Error(await getResponseError(download));
+  const video = await readDownload(download, onProgress);
   onProgress(100, 'Download ready');
-  return download.blob();
+  return video;
 }

@@ -46,7 +46,7 @@ function processJob(job, fields) {
   command.on('start', () => Object.assign(job, { status:'processing', stage:'Applying style and mixing audio' }));
   command.on('progress', ({ percent }) => { job.progress = Math.max(job.progress, Math.min(99, Math.round(percent || 0))); });
   command.on('end', async () => {
-    Object.assign(job, { status:'complete', stage:'Finalizing MP4', progress:100 });
+    Object.assign(job, { status:'complete', stage:'Ready to download', progress:100 });
     await removeFiles([job.video, job.audio]);
   });
   command.on('error', async error => {
