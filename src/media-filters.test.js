@@ -2,12 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizedVolume, replacementAudioFilter } from '../server/media-filters.js';
 
-test('replacement soundtrack removes leading silence and resets its timestamp', () => {
-  const filter = replacementAudioFilter(18, 0.72);
-  assert.match(filter, /^\[1:a:0\]silenceremove=/);
+test('replacement soundtrack starts at the chosen point and resets its timestamp', () => {
+  const filter = replacementAudioFilter(18, 0.72, 3.5);
+  assert.match(filter, /^\[1:a:0\]atrim=start=3.5/);
   assert.match(filter, /asetpts=PTS-STARTPTS/);
   assert.match(filter, /apad=pad_dur=18,atrim=duration=18\[soundtrack\]$/);
   assert.doesNotMatch(filter, /\[0:a/);
+});
+
+test('negative soundtrack start positions are clamped to zero', () => {
+  assert.match(replacementAudioFilter(10, 1, -4), /atrim=start=0/);
 });
 
 test('volume normalization permits mute and clamps invalid ranges', () => {

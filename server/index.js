@@ -46,7 +46,7 @@ async function processJob(job, fields) {
   const sizes = { '9:16':'1080:1920', '1:1':'1080:1080', '16:9':'1920:1080' };
   const sourceDuration = await probeDuration(job.video);
   const requestedDuration = Number(fields.duration) || sourceDuration;
-  const duration = Math.max(1, Math.min(sourceDuration, requestedDuration, 30));
+  const duration = Math.max(1, Math.min(sourceDuration, requestedDuration));
   const outroStart = Math.max(style.intro, duration - style.outro);
   const command = ffmpeg(job.video);
   if (job.audio) command.input(job.audio);
@@ -60,7 +60,7 @@ async function processJob(job, fields) {
     .outputOptions(['-c:v libx264','-preset fast','-movflags +faststart','-pix_fmt yuv420p']);
   if (job.audio) {
     const musicVolume = normalizedVolume(fields.musicVolume, style.musicVolume);
-    command.complexFilter(replacementAudioFilter(duration, musicVolume))
+    command.complexFilter(replacementAudioFilter(duration, musicVolume, fields.audioStart))
       .outputOptions(['-map 0:v:0', '-map [soundtrack]', '-c:a aac', '-shortest']);
   } else {
     command.audioFilters(`volume=${normalizedVolume(fields.originalVolume, .45)}`)

@@ -40,8 +40,8 @@ All eight templates are applied by FFmpeg to the exported pixels, not only to th
 preview. Each preset has a distinct color treatment plus timed intro and outro fades.
 
 When a soundtrack is uploaded, it replaces the video's original audio rather than being
-mixed with it. Leading silence below -45 dB is removed, the first audible sample is aligned
-to the start of the video, and the soundtrack is padded or trimmed to the video duration.
+mixed with it. The editor lets you preview it and choose its starting point; FFmpeg aligns
+that point to the video start, then pads or trims the soundtrack to the selected video length.
 
 `npm run dev` first performs a syntax check on the server and launcher. If Git reports
 merge conflicts while updating, resolve them before starting; do not concatenate two
