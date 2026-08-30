@@ -13,6 +13,10 @@ This starts both the Vite frontend at `http://localhost:5173` and the rendering 
 `http://localhost:3000`. Use `npm run dev:client` or `npm run dev:server` only when you
 specifically need to run one side by itself.
 
+The development launcher invokes Vite through Node directly, so the same command works
+in PowerShell, Command Prompt, macOS, and Linux without requiring a shell-specific `npx`
+executable.
+
 Build the client and start the API (requires FFmpeg on `PATH`):
 
 ```bash

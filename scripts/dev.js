@@ -1,8 +1,21 @@
 import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const viteCli = path.join(projectRoot, 'node_modules', 'vite', 'bin', 'vite.js');
 
 const processes = [
-  spawn(process.execPath, ['server/index.js'], { stdio: 'inherit' }),
-  spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['vite', '--host', '0.0.0.0'], { stdio: 'inherit' }),
+  spawn(process.execPath, [path.join(projectRoot, 'server', 'index.js')], {
+    cwd: projectRoot,
+    stdio: 'inherit',
+  }),
+  // Launch the Vite JavaScript entry point with Node instead of spawning
+  // `npx.cmd`, which throws spawn EINVAL on some Windows/Node combinations.
+  spawn(process.execPath, [viteCli, '--host', '0.0.0.0'], {
+    cwd: projectRoot,
+    stdio: 'inherit',
+  }),
 ];
 
 let stopping = false;
