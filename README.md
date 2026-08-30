@@ -39,6 +39,10 @@ client uses these URLs directly instead of reconstructing dynamic API paths.
 All eight templates are applied by FFmpeg to the exported pixels, not only to the browser
 preview. Each preset has a distinct color treatment plus timed intro and outro fades.
 
+When a soundtrack is uploaded, it replaces the video's original audio rather than being
+mixed with it. Leading silence below -45 dB is removed, the first audible sample is aligned
+to the start of the video, and the soundtrack is padded or trimmed to the video duration.
+
 `npm run dev` first performs a syntax check on the server and launcher. If Git reports
 merge conflicts while updating, resolve them before starting; do not concatenate two
 versions of `server/index.js`, because that can leave route statements outside a function.

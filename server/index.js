@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { templates } from './templates.js';
 import { uploadErrorMessage } from './upload-errors.js';
+import { normalizedVolume, replacementAudioFilter } from './media-filters.js';
 
 // ES modules do not provide CommonJS globals such as `__dirname`. Derive it
 // from import.meta.url so Windows and Unix paths are both resolved correctly.
@@ -57,11 +58,18 @@ async function processJob(job, fields) {
     `fade=t=out:st=${outroStart}:d=${style.outro}:color=${style.fadeColor}`,
   ]).duration(duration)
     .outputOptions(['-c:v libx264','-preset fast','-movflags +faststart','-pix_fmt yuv420p']);
-  if (job.audio) command.complexFilter(`[0:a]volume=${Number(fields.originalVolume)||.45}[a0];[1:a]volume=${Number(fields.musicVolume)||style.musicVolume}[a1];[a0][a1]amix=inputs=2:duration=shortest[a]`).outputOptions(['-map 0:v','-map [a]','-c:a aac']);
+  if (job.audio) {
+    const musicVolume = normalizedVolume(fields.musicVolume, style.musicVolume);
+    command.complexFilter(replacementAudioFilter(duration, musicVolume))
+      .outputOptions(['-map 0:v:0', '-map [soundtrack]', '-c:a aac', '-shortest']);
+  } else {
+    command.audioFilters(`volume=${normalizedVolume(fields.originalVolume, .45)}`)
+      .audioCodec('aac');
+  }
 
   command.on('start', () => Object.assign(job, {
     status:'processing',
-    stage:`Applying ${styleName[0].toUpperCase() + styleName.slice(1)} style and mixing audio`,
+    stage:`Applying ${styleName[0].toUpperCase() + styleName.slice(1)} style and syncing soundtrack`,
   }));
   command.on('progress', ({ percent }) => { job.progress = Math.max(job.progress, Math.min(99, Math.round(percent || 0))); });
   command.on('end', async () => {
