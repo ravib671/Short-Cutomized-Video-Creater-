@@ -34,3 +34,11 @@ test('parses a valid render status response', async () => {
   const response = new Response(JSON.stringify({ status: 'processing', progress: 42 }));
   assert.deepEqual(await getResponseJson(response), { status: 'processing', progress: 42 });
 });
+
+test('identifies an HTML response caused by a disconnected API proxy', async () => {
+  const response = new Response('<!doctype html><title>Short Video Creator</title>', {
+    status: 200,
+    headers: { 'content-type': 'text/html' },
+  });
+  await assert.rejects(getResponseJson(response, 'The render status API'), /API proxy reconnects/);
+});

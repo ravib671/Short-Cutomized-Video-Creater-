@@ -19,8 +19,15 @@ const upload = multer({ dest: temp, limits: { fileSize: 500 * 1024 * 1024 } });
 const app = express();
 const jobs = new Map();
 app.use(express.static(path.join(root, '../dist')));
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  res.type('application/json');
+  next();
+});
 
 const removeFiles = files => Promise.allSettled(files.filter(Boolean).map(file => fs.unlink(file)));
+
+app.get('/api/health', (_req, res) => res.json({ status:'ok' }));
 
 function processJob(job, fields) {
   const style = templates[fields.style] || templates.cinematic;

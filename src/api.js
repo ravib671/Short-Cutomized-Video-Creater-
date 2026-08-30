@@ -12,6 +12,7 @@ export async function getResponseError(response) {
 
 export async function getResponseJson(response, context = 'The server') {
   const body = await response.text();
+  const contentType = response.headers.get('content-type') || '';
   if (!response.ok) {
     if (!body.trim()) throw new Error(`${context} returned an empty response (${response.status}).`);
     try {
@@ -26,7 +27,10 @@ export async function getResponseJson(response, context = 'The server') {
   try {
     return JSON.parse(body);
   } catch {
-    throw new Error(`${context} returned an invalid response. Make sure the API server is running.`);
+    const receivedHtml = contentType.includes('text/html') || /^\s*</.test(body);
+    throw new Error(receivedHtml
+      ? `${context} returned the web app instead of API data. Restart npm run dev so the API proxy reconnects.`
+      : `${context} returned an invalid response. Make sure the API server is running.`);
   }
 }
 
@@ -60,7 +64,10 @@ export async function renderVideo(formData, onProgress = () => {}) {
   onProgress(40, 'Preparing your video');
 
   while (true) {
-    const statusResponse = await fetch(`/api/render/jobs/${jobId}`);
+    const statusResponse = await fetch(`/api/render/jobs/${encodeURIComponent(jobId)}`, {
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
     const job = await getResponseJson(statusResponse, 'The render status API');
     onProgress(40 + Math.round(job.progress * 0.6), job.stage || 'Rendering video');
     if (job.status === 'failed') throw new Error(job.error || 'Video processing failed.');
