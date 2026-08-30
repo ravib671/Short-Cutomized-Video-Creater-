@@ -8,7 +8,11 @@ import { fileURLToPath } from 'node:url';
 import { templates } from './templates.js';
 import { uploadErrorMessage } from './upload-errors.js';
 
-const root = path.dirname(fileURLToPath(import.meta.url));
+// ES modules do not provide CommonJS globals such as `__dirname`. Derive it
+// from import.meta.url so Windows and Unix paths are both resolved correctly.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const root = __dirname;
 const temp = path.join(root, '.tmp');
 await fs.mkdir(temp, { recursive: true });
 const upload = multer({ dest: temp, limits: { fileSize: 500 * 1024 * 1024 } });

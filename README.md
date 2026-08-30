@@ -29,3 +29,6 @@ Uploaded media is stored in `server/.tmp` only while rendering and removed after
 If an upload fails, check the server terminal for the complete error. The UI also reports
 actionable messages for file-size limits, unexpected multipart fields, temporary disk-space
 issues, and write-permission problems.
+
+The server uses ES modules. Paths are resolved from `import.meta.url`, so no global
+CommonJS `__dirname` value or current-working-directory assumption is required.
