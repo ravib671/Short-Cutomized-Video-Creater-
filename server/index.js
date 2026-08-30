@@ -6,6 +6,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { templates } from './templates.js';
+import { uploadErrorMessage } from './upload-errors.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const temp = path.join(root, '.tmp');
@@ -83,8 +84,13 @@ app.get('/api/render/jobs/:id/download', (req,res) => {
 
 app.use('/api', (_, res) => res.status(404).json({ error:'API endpoint not found.' }));
 app.use((error, _req, res, _next) => {
-  const tooLarge = error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE';
-  res.status(tooLarge ? 413 : 500).json({ error:tooLarge ? 'The selected file is too large.' : 'The upload could not be processed.' });
+  const multerError = error instanceof multer.MulterError;
+  const clientError = multerError && error.code?.startsWith('LIMIT_');
+  console.error('Upload request failed:', error);
+  res.status(error.code === 'LIMIT_FILE_SIZE' ? 413 : clientError ? 400 : 500).json({
+    error: uploadErrorMessage(error, multerError),
+    code: error.code || 'UPLOAD_FAILED',
+  });
 });
 app.get(/.*/, (_,res) => res.sendFile(path.join(root, '../dist/index.html')));
 app.listen(process.env.PORT || 3000, () => console.log(`Short Video Creator running on port ${process.env.PORT || 3000}`));

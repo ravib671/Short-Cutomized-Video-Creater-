@@ -25,3 +25,7 @@ npm start
 ```
 
 Uploaded media is stored in `server/.tmp` only while rendering and removed after the download finishes or processing fails.
+
+If an upload fails, check the server terminal for the complete error. The UI also reports
+actionable messages for file-size limits, unexpected multipart fields, temporary disk-space
+issues, and write-permission problems.
