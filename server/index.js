@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { templates } from './templates.js';
 import { uploadErrorMessage } from './upload-errors.js';
 import { normalizedVolume, replacementAudioFilter } from './media-filters.js';
+import { audioCutFilters, cutDuration, normalizeCuts, videoCutFilters } from './video-cuts.js';
 
 // ES modules do not provide CommonJS globals such as `__dirname`. Derive it
 // from import.meta.url so Windows and Unix paths are both resolved correctly.
@@ -45,12 +46,15 @@ async function processJob(job, fields) {
   const ratio = ['9:16','1:1','16:9'].includes(fields.ratio) ? fields.ratio : '9:16';
   const sizes = { '9:16':'1080:1920', '1:1':'1080:1080', '16:9':'1920:1080' };
   const sourceDuration = await probeDuration(job.video);
-  const requestedDuration = Number(fields.duration) || sourceDuration;
-  const duration = Math.max(1, Math.min(sourceDuration, requestedDuration));
+  const cuts = normalizeCuts(fields.videoCuts, sourceDuration);
+  const editedDuration = Math.max(.1, sourceDuration - cutDuration(cuts));
+  const requestedDuration = Number(fields.duration) || editedDuration;
+  const duration = Math.max(.1, Math.min(editedDuration, requestedDuration));
   const outroStart = Math.max(style.intro, duration - style.outro);
   const command = ffmpeg(job.video);
   if (job.audio) command.input(job.audio);
   command.videoFilters([
+    ...videoCutFilters(cuts),
     `scale=${sizes[ratio]}:force_original_aspect_ratio=decrease`,
     `pad=${sizes[ratio]}:(ow-iw)/2:(oh-ih)/2`,
     style.filter,
@@ -63,7 +67,11 @@ async function processJob(job, fields) {
     command.complexFilter(replacementAudioFilter(duration, musicVolume, fields.audioStart))
       .outputOptions(['-map 0:v:0', '-map [soundtrack]', '-c:a aac', '-shortest']);
   } else {
-    command.audioFilters(`volume=${normalizedVolume(fields.originalVolume, .45)}`)
+    command.audioFilters([
+      ...audioCutFilters(cuts),
+      `volume=${normalizedVolume(fields.originalVolume, .45)}`,
+      `atrim=duration=${duration}`,
+    ])
       .audioCodec('aac');
   }
 
