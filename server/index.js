@@ -85,8 +85,11 @@ app.post('/api/render/jobs', upload.fields([{ name:'video', maxCount:1 }, { name
 
 function sendJobStatus(id, res) {
   const job = jobs.get(id);
-  if (!job) return res.status(404).json({ error:'Render job not found.' });
-  return res.json({ status:job.status, stage:job.stage, progress:job.progress, error:job.error });
+  if (!job) {
+    res.status(404).json({ error:'Render job not found.' });
+  } else {
+    res.json({ status:job.status, stage:job.stage, progress:job.progress, error:job.error });
+  }
 }
 
 app.get('/api/render/status', (req,res) => sendJobStatus(req.query.id, res));
@@ -94,8 +97,14 @@ app.get('/api/render/jobs/:id', (req,res) => sendJobStatus(req.params.id, res));
 
 async function sendJobDownload(id, res) {
   const job = jobs.get(id);
-  if (!job) return res.status(404).json({ error:'Render job not found.' });
-  if (job.status !== 'complete') return res.status(409).json({ error:'The video is not ready yet.' });
+  if (!job) {
+    res.status(404).json({ error:'Render job not found.' });
+    return;
+  }
+  if (job.status !== 'complete') {
+    res.status(409).json({ error:'The video is not ready yet.' });
+    return;
+  }
   try {
     const { size } = await fs.stat(job.output);
     res.status(200);
@@ -111,9 +120,9 @@ async function sendJobDownload(id, res) {
   }
 }
 
-const downloadJob = id => async (_req, res) => {
+const downloadJob = getJobId => async (req, res) => {
   try {
-    await sendJobDownload(id(_req), res);
+    await sendJobDownload(getJobId(req), res);
   } catch (error) {
     if (res.headersSent) res.destroy(error);
     else res.status(500).json({ error:`The finished MP4 could not be downloaded: ${error.message}` });

@@ -35,3 +35,7 @@ CommonJS `__dirname` value or current-working-directory assumption is required.
 
 Render creation responses include explicit `statusUrl` and `downloadUrl` values. The
 client uses these URLs directly instead of reconstructing dynamic API paths.
+
+`npm run dev` first performs a syntax check on the server and launcher. If Git reports
+merge conflicts while updating, resolve them before starting; do not concatenate two
+versions of `server/index.js`, because that can leave route statements outside a function.

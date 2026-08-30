@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node --check server/index.js && node --check scripts/dev.js",
     "dev": "node scripts/dev.js",
     "dev:client": "vite --host 0.0.0.0",
     "dev:server": "node server/index.js",
