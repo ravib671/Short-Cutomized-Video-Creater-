@@ -4,8 +4,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "node scripts/dev.js",
+    "dev:client": "vite --host 0.0.0.0",
+    "dev:server": "node server/index.js",
     "build": "vite build",
+    "test": "node --test src/*.test.js",
     "preview": "vite preview --host 0.0.0.0",
     "server": "node server/index.js",
     "start": "node server/index.js"

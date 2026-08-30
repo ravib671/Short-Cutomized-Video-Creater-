@@ -9,6 +9,10 @@ npm install
 npm run dev
 ```
 
+This starts both the Vite frontend at `http://localhost:5173` and the rendering API at
+`http://localhost:3000`. Use `npm run dev:client` or `npm run dev:server` only when you
+specifically need to run one side by itself.
+
 Build the client and start the API (requires FFmpeg on `PATH`):
 
 ```bash
