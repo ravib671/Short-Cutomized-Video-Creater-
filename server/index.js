@@ -2,6 +2,8 @@ import express from 'express';
 import multer from 'multer';
 import ffmpeg from 'fluent-ffmpeg';
 import fs from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -90,18 +92,35 @@ function sendJobStatus(id, res) {
 app.get('/api/render/status', (req,res) => sendJobStatus(req.query.id, res));
 app.get('/api/render/jobs/:id', (req,res) => sendJobStatus(req.params.id, res));
 
-function sendJobDownload(id, res) {
+async function sendJobDownload(id, res) {
   const job = jobs.get(id);
   if (!job) return res.status(404).json({ error:'Render job not found.' });
   if (job.status !== 'complete') return res.status(409).json({ error:'The video is not ready yet.' });
-  return res.download(job.output, 'short-video.mp4', async () => {
+  try {
+    const { size } = await fs.stat(job.output);
+    res.status(200);
+    res.set({
+      'Content-Type':'video/mp4',
+      'Content-Length':String(size),
+      'Content-Disposition':'attachment; filename="short-video.mp4"',
+    });
+    await pipeline(createReadStream(job.output), res);
+  } finally {
     jobs.delete(job.id);
     await removeFiles([job.output]);
-  });
+  }
 }
 
-app.get('/api/render/download', (req,res) => sendJobDownload(req.query.id, res));
-app.get('/api/render/jobs/:id/download', (req,res) => sendJobDownload(req.params.id, res));
+const downloadJob = id => async (_req, res) => {
+  try {
+    await sendJobDownload(id(_req), res);
+  } catch (error) {
+    if (res.headersSent) res.destroy(error);
+    else res.status(500).json({ error:`The finished MP4 could not be downloaded: ${error.message}` });
+  }
+};
+app.get('/api/render/download', downloadJob(req => req.query.id));
+app.get('/api/render/jobs/:id/download', downloadJob(req => req.params.id));
 
 app.use('/api', (_, res) => res.status(404).json({ error:'API endpoint not found.' }));
 app.use((error, _req, res, _next) => {
