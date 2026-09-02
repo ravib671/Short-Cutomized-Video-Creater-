@@ -11,6 +11,7 @@ import { templates } from './templates.js';
 import { uploadErrorMessage } from './upload-errors.js';
 import { normalizedVolume, replacementAudioFilter } from './media-filters.js';
 import { audioCutFilters, cutDuration, normalizeCuts, videoCutFilters } from './video-cuts.js';
+import { animationFilters } from './animations.js';
 
 // ES modules do not provide CommonJS globals such as `__dirname`. Derive it
 // from import.meta.url so Windows and Unix paths are both resolved correctly.
@@ -57,6 +58,7 @@ async function processJob(job, fields) {
     ...videoCutFilters(cuts),
     `scale=${sizes[ratio]}:force_original_aspect_ratio=decrease`,
     `pad=${sizes[ratio]}:(ow-iw)/2:(oh-ih)/2`,
+    ...animationFilters(fields.animation, sizes[ratio], duration),
     style.filter,
     `fade=t=in:st=0:d=${style.intro}:color=${style.fadeColor}`,
     `fade=t=out:st=${outroStart}:d=${style.outro}:color=${style.fadeColor}`,

@@ -46,6 +46,9 @@ that point to the video start, then pads or trims the soundtrack to the selected
 The video editor can mark multiple start/end ranges for removal. Cuts remain editable until
 Update video is selected, and the output-length control automatically uses the edited duration.
 
+The animation control adds optional slow zoom, horizontal pan, or floating frame movement.
+Template-specific fade-in and fade-out effects are applied alongside the selected movement.
+
 `npm run dev` first performs a syntax check on the server and launcher. If Git reports
 merge conflicts while updating, resolve them before starting; do not concatenate two
 versions of `server/index.js`, because that can leave route statements outside a function.
